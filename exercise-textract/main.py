@@ -5,7 +5,7 @@ import csv
 import sys
 
 csv_array = []
-client = boto3.client('textract')
+client = boto3.client('textract', region_name='us-east-1')
 for filename in glob.glob('raw_images/*.jpg'):
     csv_row = {}
     print(f"Processing: {filename}")
@@ -24,13 +24,17 @@ for filename in glob.glob('raw_images/*.jpg'):
     )
 
     # uncomment this to see the format of the reponse
-    # print(json.dumps(response, indent=2))
+    #print(json.dumps(response, indent=2))
 
     #####
     # Replace this code with a solution to populate a dictionary with the results from textract
     #####
-    csv_row["ResponseId"] = "Sample-123"
-    csv_row["Notes"] = "Sample-I liked the movie."
+    for block in response["Blocks"]:
+        if block["BlockType"] == "QUERY":
+            query_alias = block["Query"]["Alias"]
+            answer_id = next(rel["Ids"] for rel in block["Relationships"] if rel['Type'] == "ANSWER")[0]
+            answer_text = next(b for b in response["Blocks"] if b["Id"] == answer_id)["Text"]
+            csv_row[query_alias] = answer_text
     csv_array.append(csv_row)
 
 writer = csv.DictWriter(sys.stdout, fieldnames=["ResponseId", "Notes"], dialect='excel')
